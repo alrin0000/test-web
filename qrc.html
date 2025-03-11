@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活動報到驗證</title>
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #scanner-container { display: none; }
+        #checkin-btn { display: none; padding: 10px 20px; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+    <h2>活動報到驗證系統</h2>
+
+    <div id="login-container">
+        <p>請輸入密碼：</p>
+        <input type="password" id="password" placeholder="輸入密碼">
+        <button onclick="checkPassword()">確認</button>
+    </div>
+
+    <div id="scanner-container">
+        <h3>請掃描 QR Code</h3>
+        <div id="reader" style="width: 300px; height: 300px; margin: auto;"></div>
+        <p id="result"></p>
+        <button id="checkin-btn" onclick="submitCheckin()">✅ 確定報到</button>
+    </div>
+
+    <script>
+        const correctPassword = "123456"; // 這裡換成你的密碼
+        let scannedData = "";
+
+        function checkPassword() {
+            let inputPassword = document.getElementById("password").value;
+            if (inputPassword === correctPassword) {
+                document.getElementById("login-container").style.display = "none";
+                document.getElementById("scanner-container").style.display = "block";
+                startScanner();
+            } else {
+                alert("密碼錯誤！");
+            }
+        }
+
+        function startScanner() {
+            const scanner = new Html5Qrcode("reader");
+
+            Html5Qrcode.getCameras().then(cameras => {
+                if (cameras.length > 0) {
+                    let cameraId = cameras[0].id; // 使用第一個可用的相機
+                    scanner.start(
+                        cameraId,
+                        { fps: 10, qrbox: 250 },
+                        qrCodeMessage => {
+                            scannedData = qrCodeMessage;
+                            document.getElementById("result").innerText = "掃描成功：" + scannedData;
+                            document.getElementById("checkin-btn").style.display = "block";
+                            scanner.stop();
+                        },
+                        errorMessage => {
+                            console.log("掃描中...");
+                        }
+                    ).catch(err => {
+                        console.error("無法開啟相機:", err);
+                        alert("無法開啟相機，請確認是否授權相機權限！");
+                    });
+                } else {
+                    alert("未偵測到相機，請確認設備是否有攝影機！");
+                }
+            }).catch(err => {
+                console.error("取得相機失敗:", err);
+                alert("無法取得相機，請確保使用 HTTPS 並允許相機權限！");
+            });
+        }
+
+        function submitCheckin() {
+            if (!scannedData) {
+                alert("請先掃描 QR Code");
+                return;
+            }
+
+            // Google Form URL（記得換成你的）
+            const googleFormURL = "https://docs.google.com/forms/d/e/你的表單ID/formResponse";
+            const formData = new FormData();
+            formData.append("entry.123456789", scannedData); // 這裡的 entry.xxx 要換成你的欄位 ID
+
+            fetch(googleFormURL, { method: "POST", body: formData, mode: "no-cors" })
+                .then(() => {
+                    alert("報到成功！");
+                    location.reload(); // 重新整理頁面，準備下一位
+                })
+                .catch(err => console.error(err));
+        }
+    </script>
+
+</body>
+</html>
